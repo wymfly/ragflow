@@ -1,2 +1,11 @@
-# rag/multimodal/__init__.py
-# 暂时为空，后续 Task 会添加更多导出
+from rag.multimodal.indexer import MultimodalIndexer
+from rag.multimodal.query_router import ExecutionPlan, QueryRouter, RetrievalMode
+from rag.multimodal.context_fusion import ContextFusion
+
+__all__ = [
+    "MultimodalIndexer",
+    "QueryRouter",
+    "RetrievalMode",
+    "ExecutionPlan",
+    "ContextFusion",
+]
