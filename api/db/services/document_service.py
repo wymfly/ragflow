@@ -930,13 +930,41 @@ class DocumentService(CommonService):
             bucket, name = File2DocumentService.get_storage_address(doc_id=doc["id"])
             queue_tasks(doc, bucket, name, 0)
 
+    @classmethod
+    def queue_multimodal_tasks(cls, doc, priority: int = 0):
+        """在标准分块完成后，将多模态索引任务加入队列"""
+        from api.db.services.knowledgebase_service import KnowledgebaseService
+
+        doc_id = doc["id"] if isinstance(doc, dict) else doc.id
+        kb_id = doc.get("kb_id") if isinstance(doc, dict) else doc.kb_id
+        if not kb_id:
+            return None
+
+        ok, kb = KnowledgebaseService.get_by_id(kb_id)
+        if not ok:
+            return None
+
+        parser_config = kb.parser_config if isinstance(kb.parser_config, dict) else {}
+        mm_config = parser_config.get("multimodal_enhance", {})
+        if not mm_config.get("use_multimodal", False):
+            return None
+
+        task_id = queue_raptor_o_graphrag_tasks(
+            sample_doc_id=doc if isinstance(doc, dict) else {"id": doc_id},
+            ty="multimodal",
+            priority=priority,
+            fake_doc_id="",
+            doc_ids=[doc_id],
+        )
+        return task_id
+
 
 def queue_raptor_o_graphrag_tasks(sample_doc_id, ty, priority, fake_doc_id="", doc_ids=[]):
     """
     You can provide a fake_doc_id to bypass the restriction of tasks at the knowledgebase level.
     Optionally, specify a list of doc_ids to determine which documents participate in the task.
     """
-    assert ty in ["graphrag", "raptor", "mindmap"], "type should be graphrag, raptor or mindmap"
+    assert ty in ["graphrag", "raptor", "mindmap", "multimodal"], "type should be graphrag, raptor, mindmap or multimodal"
 
     chunking_config = DocumentService.get_chunking_config(sample_doc_id["id"])
     hasher = xxhash.xxh64()
