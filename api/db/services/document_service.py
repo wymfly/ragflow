@@ -419,6 +419,30 @@ class DocumentService(CommonService):
         except Exception as e:
             logging.warning(f"Failed to cleanup knowledge graph for document {doc.id}: {e}")
 
+        # Cleanup RA multimodal index (non-critical, log and continue)
+        try:
+            from api.db.services.knowledgebase_service import KnowledgebaseService
+            ok, kb = KnowledgebaseService.get_by_id(doc.kb_id)
+            if ok:
+                parser_config = kb.parser_config if isinstance(kb.parser_config, dict) else {}
+                mm_config = parser_config.get("multimodal_enhance", {})
+                if mm_config.get("use_multimodal", False):
+                    from rag.multimodal.indexer import MultimodalIndexer
+                    indexer = MultimodalIndexer()
+                    import httpx
+                    # 同步删除：使用 httpx 同步客户端（remove_document 是同步方法）
+                    with httpx.Client(
+                        base_url=indexer.ra_service_url,
+                        timeout=httpx.Timeout(connect=5, read=30, write=10, pool=5),
+                    ) as client:
+                        resp = client.post("/delete", json={"kb_id": doc.kb_id, "doc_id": doc.id})
+                        if resp.status_code == 200:
+                            logging.info(f"RA index cleaned for document {doc.id}")
+                        else:
+                            logging.warning(f"RA index cleanup returned {resp.status_code} for document {doc.id}")
+        except Exception as e:
+            logging.warning(f"Failed to cleanup RA multimodal index for document {doc.id}: {e}")
+
         return cls.delete_by_id(doc.id)
 
     @classmethod
