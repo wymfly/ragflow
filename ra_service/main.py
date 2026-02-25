@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 
 from ra_service.config import config
 from ra_service.instance_manager import RAGAnythingInstanceManager
@@ -44,6 +45,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="RA Service", version="0.1.0", lifespan=lifespan)
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
 # ---------------------------------------------------------------------------
