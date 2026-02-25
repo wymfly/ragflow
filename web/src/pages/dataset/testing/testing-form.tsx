@@ -112,10 +112,7 @@ export default function TestingForm({
                   </FormLabel>
                   <div className="w-3/4">
                     <FormControl>
-                      <Radio.Group
-                        value={field.value}
-                        onChange={field.onChange}
-                      >
+                      <Radio.Group {...field}>
                         <div className="flex gap-4 w-full text-text-secondary">
                           <Radio value="auto">
                             {t('knowledgeDetails.modeAuto')}

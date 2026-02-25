@@ -89,7 +89,7 @@ export function TestingResult({
       {data.ra_context && !loading && (
         <FormContainer className="px-5 py-2.5 mb-4">
           <div
-            className="flex justify-between items-center cursor-pointer"
+            className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
             onClick={toggleRaContext}
           >
             <span className="text-xs font-medium text-text-sub-title-invert">

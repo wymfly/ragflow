@@ -427,6 +427,7 @@ export default {
       rebuildTip: '从所有已关联的数据源重新下载文件并再次解析。',
       baseInfo: '基础信息',
       globalIndex: '全局索引',
+      multimodalEnhance: '多模态增强',
       dataSource: '数据源',
       linkSourceSetTip: '管理与此数据集的数据源链接',
       linkDataSource: '链接数据源',

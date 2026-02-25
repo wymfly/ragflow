@@ -79,7 +79,7 @@ const MultimodalFormFields = ({
         )}
       />
       {useMultimodal && (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-3">
           <FormField
             control={form.control}
             name="parser_config.multimodal_enhance.parser"

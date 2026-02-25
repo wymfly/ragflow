@@ -339,6 +339,9 @@ export default function DatasetSettings() {
                     }
                   ></RaptorFormFields>
                   <Divider />
+                  <div className="text-base font-medium text-text-primary">
+                    {t('knowledgeConfiguration.multimodalEnhance')}
+                  </div>
                   <MultimodalFormFields className="border-none p-0" />
                 </MainContainer>
               </div>

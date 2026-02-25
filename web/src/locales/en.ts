@@ -473,6 +473,7 @@ Example: A 1 KB message with 1024-dim embedding uses ~9 KB. The 5 MB default lim
         'Re-downloads files from the linked data source and parses them again.',
       baseInfo: 'Basic',
       globalIndex: 'Global index',
+      multimodalEnhance: 'Multimodal enhance',
       dataSource: 'Data source',
       linkSourceSetTip: 'Manage data source linkage with this dataset',
       linkDataSource: 'Link data source',
