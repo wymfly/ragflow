@@ -28,9 +28,14 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@/components/ui/radio-group';
 import { UseKnowledgeGraphFormField } from '@/components/use-knowledge-graph-item';
 import { useTestRetrieval } from '@/hooks/use-knowledge-request';
 import { trim } from 'lodash';
@@ -61,6 +66,7 @@ export default function TestingForm({
     ...vectorSimilarityWeightSchema,
     ...topKSchema,
     use_kg: z.boolean().optional(),
+    retrieval_mode: z.string().optional(),
     kb_ids: z.array(z.string()).optional(),
     ...MetadataFilterSchema,
   });
@@ -72,6 +78,7 @@ export default function TestingForm({
       ...initialVectorSimilarityWeightValue,
       ...initialTopKValue,
       use_kg: false,
+      retrieval_mode: 'auto',
       kb_ids: [knowledgeBaseId],
     },
   });
@@ -97,6 +104,62 @@ export default function TestingForm({
           ></SimilaritySliderFormField>
           <RerankFormFields></RerankFormFields>
           <UseKnowledgeGraphFormField name="use_kg"></UseKnowledgeGraphFormField>
+          <FormField
+            control={form.control}
+            name="retrieval_mode"
+            render={({ field }) => (
+              <FormItem className="items-center space-y-0">
+                <div className="flex items-center">
+                  <FormLabel className="text-sm whitespace-nowrap w-1/4">
+                    {t('knowledgeDetails.retrievalMode')}
+                  </FormLabel>
+                  <div className="w-3/4">
+                    <FormControl>
+                      <RadioGroup
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        className="flex gap-4"
+                      >
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem value="auto" id="mode-auto" />
+                          <label
+                            htmlFor="mode-auto"
+                            className="text-sm cursor-pointer"
+                          >
+                            {t('knowledgeDetails.modeAuto')}
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem
+                            value="standard"
+                            id="mode-standard"
+                          />
+                          <label
+                            htmlFor="mode-standard"
+                            className="text-sm cursor-pointer"
+                          >
+                            {t('knowledgeDetails.modeStandard')}
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem
+                            value="multimodal"
+                            id="mode-multimodal"
+                          />
+                          <label
+                            htmlFor="mode-multimodal"
+                            className="text-sm cursor-pointer"
+                          >
+                            {t('knowledgeDetails.modeMultimodal')}
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                  </div>
+                </div>
+              </FormItem>
+            )}
+          />
           <CrossLanguageFormField
             name={'cross_languages'}
           ></CrossLanguageFormField>

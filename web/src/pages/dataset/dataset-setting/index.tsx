@@ -1,5 +1,6 @@
 import { DataFlowSelect } from '@/components/data-pipeline-select';
 import GraphRagItems from '@/components/parse-configuration/graph-rag-form-fields';
+import MultimodalFormFields from '@/components/parse-configuration/multimodal-form-fields';
 import RaptorFormFields from '@/components/parse-configuration/raptor-form-fields';
 import { Button } from '@/components/ui/button';
 import Divider from '@/components/ui/divider';
@@ -94,6 +95,15 @@ export default function DatasetSettings() {
           use_graphrag: true,
           entity_types: initialEntityTypes,
           method: MethodValue.Light,
+        },
+        multimodal_enhance: {
+          use_multimodal: false,
+          parser: 'mineru',
+          enable_image: true,
+          enable_table: true,
+          enable_equation: true,
+          context_window: 1,
+          retrieval_weight: 0.4,
         },
         metadata: {
           type: 'object',
@@ -328,6 +338,8 @@ export default function DatasetSettings() {
                       handleDeletePipelineTask(GenerateType.Raptor)
                     }
                   ></RaptorFormFields>
+                  <Divider />
+                  <MultimodalFormFields className="border-none p-0" />
                 </MainContainer>
               </div>
               <div className="text-right items-center flex justify-end gap-3 w-[768px]">

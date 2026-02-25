@@ -323,6 +323,11 @@ Example: A 1 KB message with 1024-dim embedding uses ~9 KB. The 5 MB default lim
         'No relevant results found. Try adjusting your query or parameters.',
       noTestResultsForNotRuned:
         'No test has been run yet. Results will appear here.',
+      retrievalMode: 'Retrieval mode',
+      modeAuto: 'Auto',
+      modeStandard: 'Standard',
+      modeMultimodal: 'Multimodal',
+      multimodalContext: 'Multimodal Context',
       testingDescription:
         'Conduct a retrieval test to check if RAGFlow can recover the intended content for the LLM. If you have adjusted the default settings, such as keyword similarity weight or similarity threshold, to achieve the optimal results, be aware that these changes will not be automatically saved. You must apply them to your chat assistant settings or the Retrieval agent component settings.',
       similarityThreshold: 'Similarity threshold',
@@ -680,6 +685,27 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       community: 'Community reports',
       communityTip:
         'In a knowledge graph, a community is a cluster of entities linked by relationships. You can have the LLM generate an abstract for each community, known as a community report. See here for more information: https://www.microsoft.com/en-us/research/blog/graphrag-improving-global-search-via-dynamic-community-selection/',
+      useMultimodal: 'Multimodal Enhance',
+      useMultimodalTip:
+        'Enable RAG-Anything multimodal retrieval enhancement for images, tables, and equations in your documents.',
+      multimodalParser: 'Parser',
+      multimodalParserTip:
+        'Document parser for multimodal content extraction.',
+      enableImage: 'Image understanding',
+      enableImageTip:
+        'Enable image entity extraction and understanding.',
+      enableTable: 'Table analysis',
+      enableTableTip:
+        'Enable table structure extraction and analysis.',
+      enableEquation: 'Equation recognition',
+      enableEquationTip:
+        'Enable mathematical equation recognition.',
+      contextWindow: 'Context window',
+      contextWindowTip:
+        'Number of surrounding text chunks to include as context for each multimodal entity.',
+      retrievalWeight: 'Retrieval weight',
+      retrievalWeightTip:
+        'Weight of multimodal retrieval results in the final context.',
       theDocumentBeingParsedCannotBeDeleted:
         'The document being parsed cannot be deleted',
       lastWeek: 'from last week',

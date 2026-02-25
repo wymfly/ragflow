@@ -67,6 +67,15 @@ export interface ParserConfig {
   tag_kb_ids?: string[];
   topn_tags?: number;
   graphrag?: { use_graphrag?: boolean };
+  multimodal_enhance?: {
+    use_multimodal?: boolean;
+    parser?: string;
+    enable_image?: boolean;
+    enable_table?: boolean;
+    enable_equation?: boolean;
+    context_window?: number;
+    retrieval_weight?: number;
+  };
   enable_metadata?: boolean;
   metadata?: any;
   built_in_metadata?: Array<{ key: string; type: string }>;
@@ -175,6 +184,15 @@ export interface INextTestingResult {
   total: number;
   labels?: Record<string, number>;
   isRuned?: boolean;
+  ra_context?: string;
+  retrieval_stats?: {
+    standard_count: number;
+    ra_count: number;
+    mode_used: string;
+    multimodal_activated: boolean;
+    modal_hits?: Record<string, number>;
+    reason?: string;
+  };
 }
 
 export type IRenameTag = { fromTag: string; toTag: string };

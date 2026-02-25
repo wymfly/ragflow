@@ -84,6 +84,17 @@ export const formSchema = z
               path: ['entity_types'],
             },
           ),
+        multimodal_enhance: z
+          .object({
+            use_multimodal: z.boolean().optional(),
+            parser: z.string().optional(),
+            enable_image: z.boolean().optional(),
+            enable_table: z.boolean().optional(),
+            enable_equation: z.boolean().optional(),
+            context_window: z.number().optional(),
+            retrieval_weight: z.number().optional(),
+          })
+          .optional(),
         metadata: z.any().optional(),
         built_in_metadata: z
           .array(

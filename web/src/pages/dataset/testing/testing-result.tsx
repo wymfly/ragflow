@@ -10,7 +10,8 @@ import { useTestRetrieval } from '@/hooks/use-knowledge-request';
 import { ITestingChunk } from '@/interfaces/database/knowledge';
 import { t } from 'i18next';
 import camelCase from 'lodash/camelCase';
-import { useMemo } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 const similarityList: Array<{ field: keyof ITestingChunk; label: string }> = [
   { field: 'similarity', label: 'Hybrid Similarity' },
@@ -52,6 +53,10 @@ export function TestingResult({
   onPaginationChange,
   data,
 }: TestingResultProps) {
+  const [showRaContext, setShowRaContext] = useState(false);
+
+  const toggleRaContext = () => setShowRaContext((prev) => !prev);
+
   const filters: FilterCollection[] = useMemo(() => {
     return [
       {
@@ -81,6 +86,35 @@ export function TestingResult({
           <FilterButton></FilterButton>
         </FilterPopover>
       </div>
+      {data.ra_context && !loading && (
+        <FormContainer className="px-5 py-2.5 mb-4">
+          <div
+            className="flex justify-between items-center cursor-pointer"
+            onClick={toggleRaContext}
+          >
+            <span className="text-sm font-medium text-text-primary">
+              {t('knowledgeDetails.multimodalContext')}
+            </span>
+            {showRaContext ? (
+              <ChevronDown className="size-4 text-text-secondary" />
+            ) : (
+              <ChevronRight className="size-4 text-text-secondary" />
+            )}
+          </div>
+          {showRaContext && (
+            <pre className="mt-2 text-xs text-text-secondary whitespace-pre-wrap bg-colors-background-inverse-strong p-3 rounded">
+              {data.ra_context}
+            </pre>
+          )}
+          {data.retrieval_stats && (
+            <div className="flex gap-3 text-xs text-text-sub-title-invert mt-1">
+              <span>Mode: {data.retrieval_stats.mode_used}</span>
+              <span>Standard: {data.retrieval_stats.standard_count}</span>
+              <span>RA: {data.retrieval_stats.ra_count || 0}</span>
+            </div>
+          )}
+        </FormContainer>
+      )}
       {data.chunks?.length > 0 && !loading && (
         <>
           <section className="flex flex-col gap-5 overflow-auto h-[calc(100vh-241px)] scrollbar-thin mb-5">

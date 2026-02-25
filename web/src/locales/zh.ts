@@ -286,6 +286,11 @@ export default {
       progressMsg: '进度',
       noTestResultsForRuned: '未找到相关结果，请尝试调整查询语句或参数',
       noTestResultsForNotRuned: '尚未运行测试，结果会显示在这里',
+      retrievalMode: '检索模式',
+      modeAuto: '自动',
+      modeStandard: '仅标准',
+      modeMultimodal: '仅多模态',
+      multimodalContext: '多模态上下文',
       testingDescription:
         '请完成召回测试：确保你的配置可以从数据库召回正确的文本块。如果你调整了这里的默认设置，比如关键词相似度权重，请注意这里的改动不会被自动保存。请务必在聊天助手设置或者召回算子设置处同步更新相关设置。',
       similarityThreshold: '相似度阈值',
@@ -642,6 +647,21 @@ General：实体和关系提取提示来自 GitHub - microsoft/graphrag：基于
       community: '社区报告生成',
       communityTip:
         '区块被聚集成层次化的社区，实体和关系通过更高抽象层次将每个部分连接起来。然后，我们使用 LLM 生成每个社区的摘要，称为社区报告。更多信息：https://www.microsoft.com/en-us/research/blog/graphrag-improving-global-search-via-dynamic-community-selection/',
+      useMultimodal: '多模态增强',
+      useMultimodalTip:
+        '启用 RAG-Anything 多模态检索增强，支持文档中图片、表格和公式的理解与检索。',
+      multimodalParser: '解析器',
+      multimodalParserTip: '用于多模态内容抽取的文档解析器。',
+      enableImage: '图片理解',
+      enableImageTip: '启用图片实体抽取和理解。',
+      enableTable: '表格分析',
+      enableTableTip: '启用表格结构抽取和分析。',
+      enableEquation: '公式识别',
+      enableEquationTip: '启用数学公式识别。',
+      contextWindow: '上下文窗口',
+      contextWindowTip: '每个多模态实体关联的周围文本块数量。',
+      retrievalWeight: '检索权重',
+      retrievalWeightTip: '多模态检索结果在最终上下文中的权重。',
     },
     chunk: {
       chunk: '解析块',
