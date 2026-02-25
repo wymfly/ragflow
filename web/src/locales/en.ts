@@ -328,6 +328,9 @@ Example: A 1 KB message with 1024-dim embedding uses ~9 KB. The 5 MB default lim
       modeStandard: 'Standard',
       modeMultimodal: 'Multimodal',
       multimodalContext: 'Multimodal Context',
+      statMode: 'Mode',
+      statStandard: 'Standard',
+      statRA: 'RA',
       testingDescription:
         'Conduct a retrieval test to check if RAGFlow can recover the intended content for the LLM. If you have adjusted the default settings, such as keyword similarity weight or similarity threshold, to achieve the optimal results, be aware that these changes will not be automatically saved. You must apply them to your chat assistant settings or the Retrieval agent component settings.',
       similarityThreshold: 'Similarity threshold',

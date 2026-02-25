@@ -32,10 +32,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/components/ui/radio-group';
+import { Radio } from '@/components/ui/radio';
 import { UseKnowledgeGraphFormField } from '@/components/use-knowledge-graph-item';
 import { useTestRetrieval } from '@/hooks/use-knowledge-request';
 import { trim } from 'lodash';
@@ -115,47 +112,28 @@ export default function TestingForm({
                   </FormLabel>
                   <div className="w-3/4">
                     <FormControl>
-                      <RadioGroup
+                      <Radio.Group
                         value={field.value}
-                        onValueChange={field.onChange}
-                        className="flex gap-4"
+                        onChange={field.onChange}
                       >
-                        <div className="flex items-center space-x-1">
-                          <RadioGroupItem value="auto" id="mode-auto" />
-                          <label
-                            htmlFor="mode-auto"
-                            className="text-sm cursor-pointer"
-                          >
+                        <div className="flex gap-4 w-full text-text-secondary">
+                          <Radio value="auto">
                             {t('knowledgeDetails.modeAuto')}
-                          </label>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <RadioGroupItem
-                            value="standard"
-                            id="mode-standard"
-                          />
-                          <label
-                            htmlFor="mode-standard"
-                            className="text-sm cursor-pointer"
-                          >
+                          </Radio>
+                          <Radio value="standard">
                             {t('knowledgeDetails.modeStandard')}
-                          </label>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <RadioGroupItem
-                            value="multimodal"
-                            id="mode-multimodal"
-                          />
-                          <label
-                            htmlFor="mode-multimodal"
-                            className="text-sm cursor-pointer"
-                          >
+                          </Radio>
+                          <Radio value="multimodal">
                             {t('knowledgeDetails.modeMultimodal')}
-                          </label>
+                          </Radio>
                         </div>
-                      </RadioGroup>
+                      </Radio.Group>
                     </FormControl>
                   </div>
+                </div>
+                <div className="flex pt-1">
+                  <div className="w-1/4"></div>
+                  <FormMessage />
                 </div>
               </FormItem>
             )}

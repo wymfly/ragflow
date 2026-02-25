@@ -291,6 +291,9 @@ export default {
       modeStandard: '仅标准',
       modeMultimodal: '仅多模态',
       multimodalContext: '多模态上下文',
+      statMode: '模式',
+      statStandard: '标准',
+      statRA: 'RA',
       testingDescription:
         '请完成召回测试：确保你的配置可以从数据库召回正确的文本块。如果你调整了这里的默认设置，比如关键词相似度权重，请注意这里的改动不会被自动保存。请务必在聊天助手设置或者召回算子设置处同步更新相关设置。',
       similarityThreshold: '相似度阈值',

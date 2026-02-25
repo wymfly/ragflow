@@ -92,7 +92,7 @@ export function TestingResult({
             className="flex justify-between items-center cursor-pointer"
             onClick={toggleRaContext}
           >
-            <span className="text-sm font-medium text-text-primary">
+            <span className="text-xs font-medium text-text-sub-title-invert">
               {t('knowledgeDetails.multimodalContext')}
             </span>
             {showRaContext ? (
@@ -107,10 +107,17 @@ export function TestingResult({
             </pre>
           )}
           {data.retrieval_stats && (
-            <div className="flex gap-3 text-xs text-text-sub-title-invert mt-1">
-              <span>Mode: {data.retrieval_stats.mode_used}</span>
-              <span>Standard: {data.retrieval_stats.standard_count}</span>
-              <span>RA: {data.retrieval_stats.ra_count || 0}</span>
+            <div className="flex gap-3 text-xs text-text-sub-title-invert italic mt-1">
+              {[
+                { label: t('knowledgeDetails.statMode'), value: data.retrieval_stats.mode_used },
+                { label: t('knowledgeDetails.statStandard'), value: data.retrieval_stats.standard_count },
+                { label: t('knowledgeDetails.statRA'), value: data.retrieval_stats.ra_count || 0 },
+              ].map((item) => (
+                <div key={item.label} className="space-x-1">
+                  <span>{item.value}</span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
             </div>
           )}
         </FormContainer>
