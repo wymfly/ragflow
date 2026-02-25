@@ -26,9 +26,7 @@ class MultimodalIndexer:
     """
 
     def __init__(self, ra_service_url: str | None = None) -> None:
-        self.ra_service_url: str = ra_service_url or os.environ.get(
-            "RA_SERVICE_URL", "http://localhost:8770"
-        )
+        self.ra_service_url: str = ra_service_url or os.environ.get("RA_SERVICE_URL", "http://localhost:8770")
         self._client: httpx.AsyncClient | None = None
 
     def _get_client(self) -> httpx.AsyncClient:
@@ -72,13 +70,15 @@ class MultimodalIndexer:
                     "kb_id": kb_id,
                     "doc_id": doc_id,
                     "tenant_id": tenant_id,
-                    "config_json": json.dumps({
-                        "enable_image": config.get("enable_image", True),
-                        "enable_table": config.get("enable_table", True),
-                        "enable_equation": config.get("enable_equation", True),
-                        "parser": config.get("parser", "mineru"),
-                        "context_window": config.get("context_window", 1),
-                    }),
+                    "config_json": json.dumps(
+                        {
+                            "enable_image": config.get("enable_image", True),
+                            "enable_table": config.get("enable_table", True),
+                            "enable_equation": config.get("enable_equation", True),
+                            "parser": config.get("parser", "mineru"),
+                            "context_window": config.get("context_window", 1),
+                        }
+                    ),
                 },
             )
             response.raise_for_status()
@@ -90,22 +90,16 @@ class MultimodalIndexer:
     async def delete_document(self, kb_id: str, doc_id: str) -> bool:
         """删除文档的多模态索引。"""
         try:
-            response = await self._get_client().post(
-                "/delete", json={"kb_id": kb_id, "doc_id": doc_id}
-            )
+            response = await self._get_client().post("/delete", json={"kb_id": kb_id, "doc_id": doc_id})
             return response.status_code == 200
         except Exception as e:
             logger.warning("RA index deletion failed for doc %s: %s", doc_id, e)
             return False
 
-    async def query(
-        self, kb_id: str, query: str, mode: str = "mix"
-    ) -> Optional[dict]:
+    async def query(self, kb_id: str, query: str, mode: str = "mix") -> Optional[dict]:
         """查询 RA Service 获取多模态上下文。"""
         try:
-            response = await self._get_client().post(
-                "/query", json={"kb_id": kb_id, "query": query, "mode": mode}
-            )
+            response = await self._get_client().post("/query", json={"kb_id": kb_id, "query": query, "mode": mode})
             if response.status_code == 200:
                 return response.json()
             return None

@@ -18,11 +18,7 @@ async def delete_document_from_lightrag(
     5. doc_status — 删除状态记录
     """
     # RAGAnything 实例的 LightRAG 在 .rag 属性中
-    lightrag = (
-        getattr(instance, "rag", None)
-        or getattr(instance, "lightrag", None)
-        or instance
-    )
+    lightrag = getattr(instance, "rag", None) or getattr(instance, "lightrag", None) or instance
     deleted_counts = {"chunks": 0, "entities": 0, "relationships": 0}
 
     # Step 1: 找到该文档的所有 chunk IDs
@@ -50,11 +46,7 @@ async def delete_document_from_lightrag(
     # Step 3: 清理图谱实体
     if hasattr(lightrag, "chunk_entity_relation_graph"):
         graph = lightrag.chunk_entity_relation_graph
-        nodes_to_remove = [
-            node
-            for node in graph.nodes()
-            if graph.nodes[node].get("source_doc_id") == doc_id
-        ]
+        nodes_to_remove = [node for node in graph.nodes() if graph.nodes[node].get("source_doc_id") == doc_id]
 
         edges_to_remove = set()
         for node in nodes_to_remove:
@@ -76,23 +68,17 @@ async def delete_document_from_lightrag(
 
             if hasattr(lightrag, "relationships_vdb"):
                 for u, v in edges_to_remove:
-                    relation_vdb_id = compute_mdhash_id(
-                        u + v, prefix="rel-"
-                    )
+                    relation_vdb_id = compute_mdhash_id(u + v, prefix="rel-")
                     await lightrag.relationships_vdb.delete(relation_vdb_id)
                     deleted_counts["relationships"] += 1
         except ImportError:
-            logger.warning(
-                "lightrag.utils not available, skipping VDB cleanup"
-            )
+            logger.warning("lightrag.utils not available, skipping VDB cleanup")
 
     # Step 5: 更新 doc_status
     if hasattr(lightrag, "doc_status"):
         try:
             await lightrag.doc_status.delete(doc_id)
         except Exception as e:
-            logger.warning(
-                "Failed to delete doc_status for %s: %s", doc_id, e
-            )
+            logger.warning("Failed to delete doc_status for %s: %s", doc_id, e)
 
     return deleted_counts

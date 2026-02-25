@@ -9,9 +9,7 @@ class RAServiceConfig:
         "RA_LLM_BASE_URL",
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
     )
-    EMBEDDING_MODEL: str = os.environ.get(
-        "RA_EMBEDDING_MODEL", "text-embedding-v3"
-    )
+    EMBEDDING_MODEL: str = os.environ.get("RA_EMBEDDING_MODEL", "text-embedding-v3")
     EMBEDDING_API_KEY: str = os.environ.get("RA_EMBEDDING_API_KEY", "")
     EMBEDDING_BASE_URL: str = os.environ.get(
         "RA_EMBEDDING_BASE_URL",

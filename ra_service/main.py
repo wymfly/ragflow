@@ -1,12 +1,13 @@
 import json
 import logging
+import os
 import re
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from ra_service.config import config
@@ -86,8 +87,9 @@ async def index_document(
         while chunk := await file.read(1024 * 1024):  # 1MB chunks
             total_bytes += len(chunk)
             if total_bytes > max_upload_bytes:
-                Path(tmp.name).unlink(missing_ok=True)
+                os.unlink(tmp.name)
                 from fastapi import HTTPException
+
                 raise HTTPException(status_code=413, detail="File too large")
             tmp.write(chunk)
         tmp_path = tmp.name
@@ -108,7 +110,10 @@ async def index_document(
             doc_id=doc_id,
         )
     finally:
-        Path(tmp_path).unlink(missing_ok=True)
+        try:
+            os.unlink(tmp_path)
+        except FileNotFoundError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -122,9 +127,7 @@ async def delete_index(request: DeleteRequest) -> DeleteResponse:
 
     from ra_service.deletion import delete_document_from_lightrag
 
-    deleted_counts = await delete_document_from_lightrag(
-        instance, request.doc_id
-    )
+    deleted_counts = await delete_document_from_lightrag(instance, request.doc_id)
 
     await instance_manager.delete_doc_metadata(request.kb_id, request.doc_id)
 
@@ -139,11 +142,7 @@ async def delete_index(request: DeleteRequest) -> DeleteResponse:
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     instance = await instance_manager.get_instance(request.kb_id)
-    lightrag = (
-        getattr(instance, "rag", None)
-        or getattr(instance, "lightrag", None)
-        or instance
-    )
+    lightrag = getattr(instance, "rag", None) or getattr(instance, "lightrag", None) or instance
 
     from lightrag import QueryParam
 
@@ -203,17 +202,9 @@ def _count_modal_entities(context: str) -> Dict[str, int]:
     if not context:
         return {}
     counts: Dict[str, int] = {}
-    image_markers = len(
-        re.findall(r"\[image\]|\[图片\]|<image>", context, re.IGNORECASE)
-    )
-    table_markers = len(
-        re.findall(r"\[table\]|\[表格\]|<table>", context, re.IGNORECASE)
-    )
-    equation_markers = len(
-        re.findall(
-            r"\[equation\]|\[公式\]|<equation>", context, re.IGNORECASE
-        )
-    )
+    image_markers = len(re.findall(r"\[image\]|\[图片\]|<image>", context, re.IGNORECASE))
+    table_markers = len(re.findall(r"\[table\]|\[表格\]|<table>", context, re.IGNORECASE))
+    equation_markers = len(re.findall(r"\[equation\]|\[公式\]|<equation>", context, re.IGNORECASE))
     if image_markers:
         counts["image"] = image_markers
     if table_markers:
@@ -223,9 +214,7 @@ def _count_modal_entities(context: str) -> Dict[str, int]:
     return counts
 
 
-def _count_multimodal_content(
-    instance, doc_id: str, config: IndexConfig
-) -> Dict[str, int]:
+def _count_multimodal_content(instance, doc_id: str, config: IndexConfig) -> Dict[str, int]:
     """统计入库后的多模态内容"""
     stats = {
         "image_count": 0,
@@ -233,11 +222,7 @@ def _count_multimodal_content(
         "equation_count": 0,
         "entity_count": 0,
     }
-    lightrag = (
-        getattr(instance, "rag", None)
-        or getattr(instance, "lightrag", None)
-        or instance
-    )
+    lightrag = getattr(instance, "rag", None) or getattr(instance, "lightrag", None) or instance
 
     # 尝试从知识图谱统计
     if hasattr(lightrag, "chunk_entity_relation_graph"):

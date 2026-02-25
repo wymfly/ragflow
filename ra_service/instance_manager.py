@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import re
 from collections import OrderedDict
 from pathlib import Path
@@ -49,7 +50,7 @@ class RAGAnythingInstanceManager:
                 logger.info("Evicting LRU instance: %s", evicted_id)
 
             working_dir = str(Path(self.base_storage_dir) / kb_id)
-            Path(working_dir).mkdir(parents=True, exist_ok=True)
+            os.makedirs(working_dir, exist_ok=True)
             instance = await self._create_instance(working_dir)
             self._instances[kb_id] = instance
             return instance
@@ -109,9 +110,7 @@ class RAGAnythingInstanceManager:
                 logger.warning("Corrupted metadata.json for kb %s: %s", kb_id, e)
         return MultimodalMetadata()
 
-    async def update_metadata(
-        self, kb_id: str, doc_id: str, doc_stats: Dict
-    ) -> None:
+    async def update_metadata(self, kb_id: str, doc_id: str, doc_stats: Dict) -> None:
         _validate_kb_id(kb_id)
         async with self._metadata_lock:
             meta = self.get_metadata(kb_id)
@@ -131,31 +130,27 @@ class RAGAnythingInstanceManager:
 
     @staticmethod
     def _recalculate_aggregates(meta: MultimodalMetadata) -> None:
-        meta.image_count = sum(
-            d.get("image_count", 0) for d in meta.doc_stats.values()
-        )
-        meta.table_count = sum(
-            d.get("table_count", 0) for d in meta.doc_stats.values()
-        )
-        meta.equation_count = sum(
-            d.get("equation_count", 0) for d in meta.doc_stats.values()
-        )
-        meta.entity_count = sum(
-            d.get("entity_count", 0) for d in meta.doc_stats.values()
-        )
+        meta.image_count = sum(d.get("image_count", 0) for d in meta.doc_stats.values())
+        meta.table_count = sum(d.get("table_count", 0) for d in meta.doc_stats.values())
+        meta.equation_count = sum(d.get("equation_count", 0) for d in meta.doc_stats.values())
+        meta.entity_count = sum(d.get("entity_count", 0) for d in meta.doc_stats.values())
         meta.has_images = meta.image_count > 0
         meta.has_tables = meta.table_count > 0
         meta.has_equations = meta.equation_count > 0
 
-    async def _persist_metadata(
-        self, kb_id: str, meta: MultimodalMetadata
-    ) -> None:
-        meta_path = Path(self.base_storage_dir) / kb_id / "metadata.json"
-        meta_path.parent.mkdir(parents=True, exist_ok=True)
+    async def _persist_metadata(self, kb_id: str, meta: MultimodalMetadata) -> None:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._persist_metadata_sync, kb_id, meta)
+
+    def _persist_metadata_sync(self, kb_id: str, meta: MultimodalMetadata) -> None:
+        meta_dir = os.path.join(self.base_storage_dir, kb_id)
+        os.makedirs(meta_dir, exist_ok=True)
+        meta_file = os.path.join(meta_dir, "metadata.json")
+        tmp_file = meta_file + ".tmp"
         # 原子写入：先写临时文件再 rename
-        tmp_path = meta_path.with_suffix(".tmp")
-        tmp_path.write_text(meta.model_dump_json(indent=2))
-        tmp_path.rename(meta_path)
+        with open(tmp_file, "w") as f:
+            f.write(meta.model_dump_json(indent=2))
+        os.replace(tmp_file, meta_file)
 
     async def remove_instance(self, kb_id: str) -> None:
         _validate_kb_id(kb_id)

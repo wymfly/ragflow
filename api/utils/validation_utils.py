@@ -34,7 +34,9 @@ from werkzeug.exceptions import BadRequest, UnsupportedMediaType
 from api.constants import DATASET_NAME_LIMIT
 
 
-async def validate_and_parse_json_request(request: Request, validator: type[BaseModel], *, extras: dict[str, Any] | None = None, exclude_unset: bool = False) -> tuple[dict[str, Any] | None, str | None]:
+async def validate_and_parse_json_request(
+    request: Request, validator: type[BaseModel], *, extras: dict[str, Any] | None = None, exclude_unset: bool = False
+) -> tuple[dict[str, Any] | None, str | None]:
     """
     Validates and parses JSON requests through a multi-stage validation pipeline.
 
@@ -346,6 +348,7 @@ class GraphragConfig(Base):
 
 class MultimodalEnhanceConfig(Base):
     """多模态增强配置（与 graphrag、raptor 同级）"""
+
     use_multimodal: Annotated[bool, Field(default=False)]
     parser: Annotated[str, Field(default="mineru")]
     enable_image: Annotated[bool, Field(default=True)]

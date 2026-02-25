@@ -1,4 +1,5 @@
 """检索路由器：决定检索执行策略"""
+
 import logging
 import os
 import time
@@ -28,9 +29,7 @@ class ExecutionPlan:
 
 class QueryRouter:
     def __init__(self, ra_service_url: str | None = None):
-        self.ra_service_url = ra_service_url or os.environ.get(
-            "RA_SERVICE_URL", "http://localhost:8770"
-        )
+        self.ra_service_url = ra_service_url or os.environ.get("RA_SERVICE_URL", "http://localhost:8770")
         self._metadata_cache: Dict[str, Dict] = {}
         self._cache_ttl = 300
 
@@ -74,16 +73,10 @@ class QueryRouter:
         ra_kb_ids = []
         for kb_id in kb_ids:
             config = (kb_parser_configs or {}).get(kb_id, {})
-            if not config.get("multimodal_enhance", {}).get(
-                "use_multimodal", False
-            ):
+            if not config.get("multimodal_enhance", {}).get("use_multimodal", False):
                 continue
             metadata = await self._get_metadata(kb_id)
-            if metadata and (
-                metadata.get("has_images")
-                or metadata.get("has_tables")
-                or metadata.get("has_equations")
-            ):
+            if metadata and (metadata.get("has_images") or metadata.get("has_tables") or metadata.get("has_equations")):
                 ra_kb_ids.append(kb_id)
 
         if ra_kb_ids:
@@ -101,26 +94,15 @@ class QueryRouter:
             reason="无知识库含多模态实体",
         )
 
-    def _get_mm_enabled_kb_ids(
-        self, kb_ids: List[str], configs: Optional[Dict[str, dict]]
-    ) -> List[str]:
-        return [
-            kb_id
-            for kb_id in kb_ids
-            if (configs or {})
-            .get(kb_id, {})
-            .get("multimodal_enhance", {})
-            .get("use_multimodal", False)
-        ]
+    def _get_mm_enabled_kb_ids(self, kb_ids: List[str], configs: Optional[Dict[str, dict]]) -> List[str]:
+        return [kb_id for kb_id in kb_ids if (configs or {}).get(kb_id, {}).get("multimodal_enhance", {}).get("use_multimodal", False)]
 
     async def _get_metadata(self, kb_id: str) -> Optional[dict]:
         cached = self._metadata_cache.get(kb_id)
         if cached and (time.time() - cached["ts"]) < self._cache_ttl:
             return cached["data"]
         try:
-            async with httpx.AsyncClient(
-                base_url=self.ra_service_url, timeout=10
-            ) as client:
+            async with httpx.AsyncClient(base_url=self.ra_service_url, timeout=10) as client:
                 resp = await client.get(f"/metadata/{kb_id}")
                 if resp.status_code == 200:
                     meta = resp.json().get("metadata", {})

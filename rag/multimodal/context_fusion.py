@@ -1,4 +1,5 @@
 """两路检索结果上下文融合器"""
+
 from typing import Dict, List, Optional
 
 
@@ -30,9 +31,7 @@ class ContextFusion:
         }
 
         if ra_context:
-            truncated = self.truncate_context(
-                ra_context, self.max_ra_context_tokens
-            )
+            truncated = self.truncate_context(ra_context, self.max_ra_context_tokens)
             result["ra_context"] = truncated
             result["retrieval_stats"]["ra_count"] = 1
             result["retrieval_stats"]["multimodal_activated"] = True
