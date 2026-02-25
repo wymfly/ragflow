@@ -105,6 +105,36 @@ services:
               count: all
               capabilities: [gpu]
 
+  ra-service:
+    profiles:
+      - multimodal
+    build:
+      context: ../ra_service
+      dockerfile: Dockerfile
+    ports:
+      - ${RA_SERVICE_PORT:-8770}:8770
+    volumes:
+      - ra_data:/app/data
+    env_file: .env
+    environment:
+      - RA_SERVICE_HOST=0.0.0.0
+      - RA_SERVICE_PORT=8770
+      - RA_LLM_MODEL=${RA_LLM_MODEL:-qwen-plus}
+      - RA_LLM_API_KEY=${RA_LLM_API_KEY:-}
+      - RA_LLM_BASE_URL=${RA_LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - RA_EMBEDDING_MODEL=${RA_EMBEDDING_MODEL:-text-embedding-v3}
+      - RA_EMBEDDING_API_KEY=${RA_EMBEDDING_API_KEY:-}
+      - RA_EMBEDDING_BASE_URL=${RA_EMBEDDING_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - RA_STORAGE_DIR=/app/data
+    networks:
+      - ragflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8770/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    restart: unless-stopped
+
 
   # executor:
   #   depends_on:
