@@ -16,6 +16,7 @@
 import asyncio
 import json
 import logging
+import os
 import random
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -427,12 +428,10 @@ class DocumentService(CommonService):
                 parser_config = kb.parser_config if isinstance(kb.parser_config, dict) else {}
                 mm_config = parser_config.get("multimodal_enhance", {})
                 if mm_config.get("use_multimodal", False):
-                    from rag.multimodal.indexer import MultimodalIndexer
-                    indexer = MultimodalIndexer()
                     import httpx
-                    # 同步删除：使用 httpx 同步客户端（remove_document 是同步方法）
+                    ra_service_url = os.environ.get("RA_SERVICE_URL", "http://localhost:8770")
                     with httpx.Client(
-                        base_url=indexer.ra_service_url,
+                        base_url=ra_service_url,
                         timeout=httpx.Timeout(connect=5, read=30, write=10, pool=5),
                     ) as client:
                         resp = client.post("/delete", json={"kb_id": doc.kb_id, "doc_id": doc.id})

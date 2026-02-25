@@ -419,7 +419,12 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
             for kb in kbs:
                 pc = kb.parser_config if isinstance(kb.parser_config, dict) else {}
                 kb_parser_configs[kb.id] = pc
-            plan = await _decide_retrieval_plan(dialog.kb_ids, kb_parser_configs, retrieval_mode)
+            try:
+                plan = await _decide_retrieval_plan(dialog.kb_ids, kb_parser_configs, retrieval_mode)
+            except Exception as e:
+                logging.warning("RA retrieval plan failed, falling back to standard: %s", e)
+                from rag.multimodal.query_router import ExecutionPlan
+                plan = ExecutionPlan(run_standard=True, run_ra=False, ra_kb_ids=[], mode_used="standard", reason="fallback")
 
             if embd_mdl and plan.run_standard:
                 kbinfos = await retriever.retrieval(
@@ -1251,33 +1256,31 @@ async def _enhance_with_ra_context(
         "reason": plan.reason,
     })
 
-    indexer = MultimodalIndexer()
-    try:
-        ra_tasks = [
-            indexer.query(kb_id=kb_id, query=question, mode="mix")
-            for kb_id in plan.ra_kb_ids
-        ]
-        ra_responses = await asyncio.gather(*ra_tasks, return_exceptions=True)
+    async with MultimodalIndexer() as indexer:
+        try:
+            ra_tasks = [
+                indexer.query(kb_id=kb_id, query=question, mode="mix")
+                for kb_id in plan.ra_kb_ids
+            ]
+            ra_responses = await asyncio.gather(*ra_tasks, return_exceptions=True)
 
-        ra_contexts = []
-        ra_entities_total = {}
-        for resp in ra_responses:
-            if isinstance(resp, Exception):
-                continue
-            if resp and resp.get("context"):
-                ra_contexts.append(resp["context"])
-            for modal, count in (resp or {}).get("modal_entities_found", {}).items():
-                ra_entities_total[modal] = ra_entities_total.get(modal, 0) + count
+            ra_contexts = []
+            ra_entities_total = {}
+            for resp in ra_responses:
+                if isinstance(resp, Exception):
+                    continue
+                if resp and resp.get("context"):
+                    ra_contexts.append(resp["context"])
+                for modal, count in (resp or {}).get("modal_entities_found", {}).items():
+                    ra_entities_total[modal] = ra_entities_total.get(modal, 0) + count
 
-        if ra_contexts:
-            fusion = ContextFusion()
-            merged = "\n\n".join(ra_contexts)
-            kbinfos["ra_context"] = fusion.truncate_context(merged, 4096)
-            kbinfos["retrieval_stats"]["ra_count"] = len(ra_contexts)
-            kbinfos["retrieval_stats"]["modal_hits"] = ra_entities_total
-    except Exception as e:
-        logging.warning(f"RA retrieval failed: {e}")
-    finally:
-        await indexer.close()
+            if ra_contexts:
+                fusion = ContextFusion()
+                merged = "\n\n".join(ra_contexts)
+                kbinfos["ra_context"] = fusion.truncate_context(merged, 4096)
+                kbinfos["retrieval_stats"]["ra_count"] = len(ra_contexts)
+                kbinfos["retrieval_stats"]["modal_hits"] = ra_entities_total
+        except Exception as e:
+            logging.warning("RA retrieval failed: %s", e)
 
     return kbinfos

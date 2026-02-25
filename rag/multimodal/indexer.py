@@ -19,16 +19,36 @@ class MultimodalIndexer:
 
     所有方法捕获异常后 log warning 并返回 None/False，
     不向上抛异常（故障隔离原则）。
+
+    支持 async context manager：
+        async with MultimodalIndexer() as indexer:
+            await indexer.query(...)
     """
 
     def __init__(self, ra_service_url: str | None = None) -> None:
         self.ra_service_url: str = ra_service_url or os.environ.get(
             "RA_SERVICE_URL", "http://localhost:8770"
         )
-        self.client: httpx.AsyncClient = httpx.AsyncClient(
-            base_url=self.ra_service_url,
-            timeout=httpx.Timeout(connect=10, read=600, write=60, pool=10),
-        )
+        self._client: httpx.AsyncClient | None = None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                base_url=self.ra_service_url,
+                timeout=httpx.Timeout(connect=10, read=600, write=60, pool=10),
+                limits=httpx.Limits(
+                    max_connections=20,
+                    max_keepalive_connections=5,
+                    keepalive_expiry=30,
+                ),
+            )
+        return self._client
+
+    async def __aenter__(self) -> "MultimodalIndexer":
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        await self.close()
 
     async def index_document(
         self,
@@ -45,7 +65,7 @@ class MultimodalIndexer:
         以 JSON 字符串传递。
         """
         try:
-            response = await self.client.post(
+            response = await self._get_client().post(
                 "/index",
                 files={"file": (file_name, file_binary)},
                 data={
@@ -70,7 +90,7 @@ class MultimodalIndexer:
     async def delete_document(self, kb_id: str, doc_id: str) -> bool:
         """删除文档的多模态索引。"""
         try:
-            response = await self.client.post(
+            response = await self._get_client().post(
                 "/delete", json={"kb_id": kb_id, "doc_id": doc_id}
             )
             return response.status_code == 200
@@ -83,7 +103,7 @@ class MultimodalIndexer:
     ) -> Optional[dict]:
         """查询 RA Service 获取多模态上下文。"""
         try:
-            response = await self.client.post(
+            response = await self._get_client().post(
                 "/query", json={"kb_id": kb_id, "query": query, "mode": mode}
             )
             if response.status_code == 200:
@@ -96,7 +116,7 @@ class MultimodalIndexer:
     async def get_metadata(self, kb_id: str) -> Optional[dict]:
         """获取知识库多模态元数据。"""
         try:
-            response = await self.client.get(f"/metadata/{kb_id}")
+            response = await self._get_client().get(f"/metadata/{kb_id}")
             if response.status_code == 200:
                 return response.json().get("metadata")
             return None
@@ -106,4 +126,5 @@ class MultimodalIndexer:
 
     async def close(self) -> None:
         """关闭 httpx client。"""
-        await self.client.aclose()
+        if self._client and not self._client.is_closed:
+            await self._client.aclose()

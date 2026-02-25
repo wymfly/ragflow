@@ -126,7 +126,11 @@ async def delete_index(request: DeleteRequest) -> DeleteResponse:
 @app.post("/query")
 async def query(request: QueryRequest) -> QueryResponse:
     instance = await instance_manager.get_instance(request.kb_id)
-    lightrag = getattr(instance, "rag", instance)
+    lightrag = (
+        getattr(instance, "rag", None)
+        or getattr(instance, "lightrag", None)
+        or instance
+    )
 
     from lightrag import QueryParam
 
@@ -216,7 +220,11 @@ def _count_multimodal_content(
         "equation_count": 0,
         "entity_count": 0,
     }
-    lightrag = getattr(instance, "rag", instance)
+    lightrag = (
+        getattr(instance, "rag", None)
+        or getattr(instance, "lightrag", None)
+        or instance
+    )
 
     # 尝试从知识图谱统计
     if hasattr(lightrag, "chunk_entity_relation_graph"):
