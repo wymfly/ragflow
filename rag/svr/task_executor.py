@@ -106,6 +106,7 @@ TASK_TYPE_TO_PIPELINE_TASK_TYPE = {
     "graphrag": PipelineTaskType.GRAPH_RAG,
     "mindmap": PipelineTaskType.MINDMAP,
     "memory": PipelineTaskType.MEMORY,
+    "multimodal": PipelineTaskType.PARSE,  # 复用 PARSE 类型
 }
 
 UNACKED_ITERATOR = None
@@ -1099,6 +1100,55 @@ async def do_handle_task(task):
             )
             logging.info(f"GraphRAG task result for task {task}:\n{result}")
         progress_callback(prog=1.0, msg="Knowledge Graph done ({:.2f}s)".format(timer() - start_ts))
+        return
+    elif task_type == "multimodal":
+        # RA 多模态索引任务
+        ok, kb = KnowledgebaseService.get_by_id(task_dataset_id)
+        if not ok:
+            progress_callback(prog=-1.0, msg="Cannot find dataset for multimodal task")
+            return
+
+        mm_config = kb.parser_config.get("multimodal_enhance", {}) if isinstance(kb.parser_config, dict) else {}
+        if not mm_config.get("use_multimodal", False):
+            progress_callback(prog=1.0, msg="Multimodal enhance disabled, skip")
+            return
+
+        # 从对象存储获取文件二进制
+        doc_ids = task.get("doc_ids", [])
+        target_doc_id = doc_ids[0] if doc_ids else task.get("doc_id", "")
+        if not target_doc_id:
+            progress_callback(prog=-1.0, msg="No doc_id for multimodal task")
+            return
+
+        try:
+            from api.db.services.file2document_service import File2DocumentService
+            bucket, name = File2DocumentService.get_storage_address(doc_id=target_doc_id)
+            binary = settings.STORAGE_IMPL.get(bucket, name)
+        except Exception as e:
+            progress_callback(prog=-1.0, msg=f"Failed to get file from storage: {e}")
+            return
+
+        # 调用 RA Service
+        from rag.multimodal.indexer import MultimodalIndexer
+        mm_indexer = MultimodalIndexer()
+        try:
+            mm_metadata = await mm_indexer.index_document(
+                kb_id=task_dataset_id,
+                doc_id=target_doc_id,
+                file_binary=binary,
+                file_name=task.get("name", "unknown"),
+                tenant_id=task_tenant_id,
+                config=mm_config,
+            )
+            if mm_metadata:
+                progress_callback(prog=1.0, msg="Multimodal indexing done")
+            else:
+                progress_callback(prog=1.0, msg="Multimodal indexing skipped (non-blocking)")
+        except Exception as e:
+            logging.warning(f"Multimodal indexing failed for doc {target_doc_id}: {e}")
+            progress_callback(prog=1.0, msg=f"Multimodal indexing failed: {e}")
+        finally:
+            await mm_indexer.close()
         return
     elif task_type == "mindmap":
         progress_callback(1, "place holder")
