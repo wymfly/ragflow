@@ -413,7 +413,15 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
             await task
 
         else:
-            if embd_mdl:
+            # ===== 多模态检索路由决策 =====
+            retrieval_mode = kwargs.get("retrieval_mode", "auto")
+            kb_parser_configs = {}
+            for kb in kbs:
+                pc = kb.parser_config if isinstance(kb.parser_config, dict) else {}
+                kb_parser_configs[kb.id] = pc
+            plan = await _decide_retrieval_plan(dialog.kb_ids, kb_parser_configs, retrieval_mode)
+
+            if embd_mdl and plan.run_standard:
                 kbinfos = await retriever.retrieval(
                     " ".join(questions),
                     embd_mdl,
@@ -445,7 +453,15 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
                 if ck["content_with_weight"]:
                     kbinfos["chunks"].insert(0, ck)
 
+            # ===== RA 多模态检索 =====
+            if plan.run_ra:
+                kbinfos = await _enhance_with_ra_context(kbinfos, " ".join(questions), plan)
+
     knowledges = kb_prompt(kbinfos, max_tokens)
+
+    # RA 多模态上下文拼入
+    if kbinfos.get("ra_context"):
+        knowledges.append(f"[多模态知识图谱上下文]\n{kbinfos['ra_context']}")
     logging.debug("{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
 
     retrieval_ts = timer()
@@ -1201,3 +1217,67 @@ async def gen_mindmap(question, kb_ids, tenant_id, search_config={}):
     mindmap = MindMapExtractor(chat_mdl)
     mind_map = await mindmap([c["content_with_weight"] for c in ranks["chunks"]])
     return mind_map.output
+
+
+async def _decide_retrieval_plan(
+    kb_ids: list[str],
+    kb_parser_configs: dict[str, dict],
+    retrieval_mode: str = "auto",
+):
+    """在 retriever.retrieval() 之前调用，决定检索执行计划"""
+    from rag.multimodal.query_router import QueryRouter, RetrievalMode
+    router = QueryRouter()
+    return await router.decide(
+        kb_ids=kb_ids,
+        retrieval_mode=RetrievalMode(retrieval_mode),
+        kb_parser_configs=kb_parser_configs,
+    )
+
+
+async def _enhance_with_ra_context(
+    kbinfos: dict,
+    question: str,
+    plan,
+) -> dict:
+    """在标准检索完成后（或跳过后），拼入 RA 多模态上下文"""
+    import asyncio
+    from rag.multimodal.indexer import MultimodalIndexer
+    from rag.multimodal.context_fusion import ContextFusion
+
+    kbinfos.setdefault("retrieval_stats", {}).update({
+        "standard_count": len(kbinfos.get("chunks", [])),
+        "mode_used": plan.mode_used,
+        "multimodal_activated": True,
+        "reason": plan.reason,
+    })
+
+    indexer = MultimodalIndexer()
+    try:
+        ra_tasks = [
+            indexer.query(kb_id=kb_id, query=question, mode="mix")
+            for kb_id in plan.ra_kb_ids
+        ]
+        ra_responses = await asyncio.gather(*ra_tasks, return_exceptions=True)
+
+        ra_contexts = []
+        ra_entities_total = {}
+        for resp in ra_responses:
+            if isinstance(resp, Exception):
+                continue
+            if resp and resp.get("context"):
+                ra_contexts.append(resp["context"])
+            for modal, count in (resp or {}).get("modal_entities_found", {}).items():
+                ra_entities_total[modal] = ra_entities_total.get(modal, 0) + count
+
+        if ra_contexts:
+            fusion = ContextFusion()
+            merged = "\n\n".join(ra_contexts)
+            kbinfos["ra_context"] = fusion.truncate_context(merged, 4096)
+            kbinfos["retrieval_stats"]["ra_count"] = len(ra_contexts)
+            kbinfos["retrieval_stats"]["modal_hits"] = ra_entities_total
+    except Exception as e:
+        logging.warning(f"RA retrieval failed: {e}")
+    finally:
+        await indexer.close()
+
+    return kbinfos
