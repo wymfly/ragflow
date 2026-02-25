@@ -363,6 +363,7 @@ async def retrieval_test():
     use_kg = req.get("use_kg", False)
     top = int(req.get("top_k", 1024))
     langs = req.get("cross_languages", [])
+    retrieval_mode = req.get("retrieval_mode", "auto")
     user_id = current_user.id
 
     async def _retrieval():
@@ -439,6 +440,23 @@ async def retrieval_test():
                                                    LLMBundle(kb.tenant_id, LLMType.CHAT))
             if ck["content_with_weight"]:
                 ranks["chunks"].insert(0, ck)
+
+        # ===== 多模态检索 =====
+        try:
+            from rag.multimodal.query_router import QueryRouter, RetrievalMode
+            kb_parser_configs = {}
+            for kid in kb_ids:
+                ok_kb, kb_obj = KnowledgebaseService.get_by_id(kid)
+                if ok_kb:
+                    kb_parser_configs[kid] = kb_obj.parser_config if isinstance(kb_obj.parser_config, dict) else {}
+            router = QueryRouter()
+            plan = await router.decide(kb_ids, RetrievalMode(retrieval_mode), kb_parser_configs)
+            if plan.run_ra:
+                from api.db.services.dialog_service import _enhance_with_ra_context
+                ranks = await _enhance_with_ra_context(ranks, _question, plan)
+        except Exception as e:
+            logging.warning(f"Multimodal retrieval in retrieval_test failed: {e}")
+
         ranks["chunks"] = settings.retriever.retrieval_by_children(ranks["chunks"], tenant_ids)
 
         for c in ranks["chunks"]:
