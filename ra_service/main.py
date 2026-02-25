@@ -72,11 +72,18 @@ async def index_document(
     index_config = IndexConfig(**json.loads(config_json))
     instance = await instance_manager.get_instance(kb_id)
 
-    # 写入临时文件
+    # 流式写入临时文件（避免一次性加载全部内容到内存）
+    max_upload_bytes = 500 * 1024 * 1024  # 500MB
     suffix = Path(file.filename or "doc").suffix
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        content = await file.read()
-        tmp.write(content)
+        total_bytes = 0
+        while chunk := await file.read(1024 * 1024):  # 1MB chunks
+            total_bytes += len(chunk)
+            if total_bytes > max_upload_bytes:
+                Path(tmp.name).unlink(missing_ok=True)
+                from fastapi import HTTPException
+                raise HTTPException(status_code=413, detail="File too large")
+            tmp.write(chunk)
         tmp_path = tmp.name
 
     try:

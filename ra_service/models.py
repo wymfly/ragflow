@@ -3,6 +3,8 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
+from typing import Literal
+
 
 class ModalType(str, Enum):
     TEXT = "text"
@@ -40,7 +42,7 @@ class DeleteRequest(BaseModel):
 class QueryRequest(BaseModel):
     kb_id: str
     query: str
-    mode: str = "mix"
+    mode: Literal["local", "global", "hybrid", "naive", "mix"] = "mix"
 
 
 class QueryResponse(BaseModel):

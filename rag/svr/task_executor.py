@@ -1130,25 +1130,23 @@ async def do_handle_task(task):
 
         # 调用 RA Service
         from rag.multimodal.indexer import MultimodalIndexer
-        mm_indexer = MultimodalIndexer()
-        try:
-            mm_metadata = await mm_indexer.index_document(
-                kb_id=task_dataset_id,
-                doc_id=target_doc_id,
-                file_binary=binary,
-                file_name=task.get("name", "unknown"),
-                tenant_id=task_tenant_id,
-                config=mm_config,
-            )
-            if mm_metadata:
-                progress_callback(prog=1.0, msg="Multimodal indexing done")
-            else:
-                progress_callback(prog=1.0, msg="Multimodal indexing skipped (non-blocking)")
-        except Exception as e:
-            logging.warning(f"Multimodal indexing failed for doc {target_doc_id}: {e}")
-            progress_callback(prog=1.0, msg=f"Multimodal indexing failed: {e}")
-        finally:
-            await mm_indexer.close()
+        async with MultimodalIndexer() as mm_indexer:
+            try:
+                mm_metadata = await mm_indexer.index_document(
+                    kb_id=task_dataset_id,
+                    doc_id=target_doc_id,
+                    file_binary=binary,
+                    file_name=task.get("name", "unknown"),
+                    tenant_id=task_tenant_id,
+                    config=mm_config,
+                )
+                if mm_metadata:
+                    progress_callback(prog=1.0, msg="Multimodal indexing done")
+                else:
+                    progress_callback(prog=1.0, msg="Multimodal indexing skipped (non-blocking)")
+            except Exception as e:
+                logging.warning(f"Multimodal indexing failed for doc {target_doc_id}: {e}")
+                progress_callback(prog=1.0, msg=f"Multimodal indexing failed: {e}")
         return
     elif task_type == "mindmap":
         progress_callback(1, "place holder")

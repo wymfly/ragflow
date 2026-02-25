@@ -1,5 +1,7 @@
+import asyncio
 import json
 import logging
+import re
 from collections import OrderedDict
 from pathlib import Path
 from typing import Dict
@@ -7,6 +9,15 @@ from typing import Dict
 from ra_service.models import MultimodalMetadata
 
 logger = logging.getLogger(__name__)
+
+# kb_id 只允许字母数字、连字符、下划线
+_SAFE_KB_ID = re.compile(r"^[a-zA-Z0-9_\-]+$")
+
+
+def _validate_kb_id(kb_id: str) -> str:
+    if not _SAFE_KB_ID.match(kb_id):
+        raise ValueError(f"Invalid kb_id: {kb_id!r}")
+    return kb_id
 
 
 class RAGAnythingInstanceManager:
@@ -21,22 +32,27 @@ class RAGAnythingInstanceManager:
         self.max_instances = max_instances
         self._instances: OrderedDict = OrderedDict()
         self._metadata_cache: Dict[str, MultimodalMetadata] = {}
+        self._instance_lock = asyncio.Lock()
+        self._metadata_lock = asyncio.Lock()
 
     async def get_instance(self, kb_id: str):
         """获取或创建知识库对应的 RAGAnything 实例"""
-        if kb_id in self._instances:
-            self._instances.move_to_end(kb_id)
-            return self._instances[kb_id]
+        _validate_kb_id(kb_id)
 
-        if len(self._instances) >= self.max_instances:
-            evicted_id, evicted = self._instances.popitem(last=False)
-            logger.info("Evicting LRU instance: %s", evicted_id)
+        async with self._instance_lock:
+            if kb_id in self._instances:
+                self._instances.move_to_end(kb_id)
+                return self._instances[kb_id]
 
-        working_dir = str(Path(self.base_storage_dir) / kb_id)
-        Path(working_dir).mkdir(parents=True, exist_ok=True)
-        instance = await self._create_instance(working_dir)
-        self._instances[kb_id] = instance
-        return instance
+            if len(self._instances) >= self.max_instances:
+                evicted_id, evicted = self._instances.popitem(last=False)
+                logger.info("Evicting LRU instance: %s", evicted_id)
+
+            working_dir = str(Path(self.base_storage_dir) / kb_id)
+            Path(working_dir).mkdir(parents=True, exist_ok=True)
+            instance = await self._create_instance(working_dir)
+            self._instances[kb_id] = instance
+            return instance
 
     async def _create_instance(self, working_dir: str):
         """创建 RAGAnything 实例
@@ -76,6 +92,7 @@ class RAGAnythingInstanceManager:
             raise
 
     def get_metadata(self, kb_id: str) -> MultimodalMetadata:
+        _validate_kb_id(kb_id)
         if kb_id in self._metadata_cache:
             return self._metadata_cache[kb_id]
         return self._load_metadata_from_disk(kb_id)
@@ -83,27 +100,34 @@ class RAGAnythingInstanceManager:
     def _load_metadata_from_disk(self, kb_id: str) -> MultimodalMetadata:
         meta_path = Path(self.base_storage_dir) / kb_id / "metadata.json"
         if meta_path.exists():
-            data = json.loads(meta_path.read_text())
-            meta = MultimodalMetadata(**data)
-            self._metadata_cache[kb_id] = meta
-            return meta
+            try:
+                data = json.loads(meta_path.read_text())
+                meta = MultimodalMetadata(**data)
+                self._metadata_cache[kb_id] = meta
+                return meta
+            except (json.JSONDecodeError, Exception) as e:
+                logger.warning("Corrupted metadata.json for kb %s: %s", kb_id, e)
         return MultimodalMetadata()
 
     async def update_metadata(
         self, kb_id: str, doc_id: str, doc_stats: Dict
     ) -> None:
-        meta = self.get_metadata(kb_id)
-        meta.doc_stats[doc_id] = doc_stats
-        self._recalculate_aggregates(meta)
-        self._metadata_cache[kb_id] = meta
-        await self._persist_metadata(kb_id, meta)
+        _validate_kb_id(kb_id)
+        async with self._metadata_lock:
+            meta = self.get_metadata(kb_id)
+            meta.doc_stats[doc_id] = doc_stats
+            self._recalculate_aggregates(meta)
+            self._metadata_cache[kb_id] = meta
+            await self._persist_metadata(kb_id, meta)
 
     async def delete_doc_metadata(self, kb_id: str, doc_id: str) -> None:
-        meta = self.get_metadata(kb_id)
-        meta.doc_stats.pop(doc_id, None)
-        self._recalculate_aggregates(meta)
-        self._metadata_cache[kb_id] = meta
-        await self._persist_metadata(kb_id, meta)
+        _validate_kb_id(kb_id)
+        async with self._metadata_lock:
+            meta = self.get_metadata(kb_id)
+            meta.doc_stats.pop(doc_id, None)
+            self._recalculate_aggregates(meta)
+            self._metadata_cache[kb_id] = meta
+            await self._persist_metadata(kb_id, meta)
 
     @staticmethod
     def _recalculate_aggregates(meta: MultimodalMetadata) -> None:
@@ -128,9 +152,13 @@ class RAGAnythingInstanceManager:
     ) -> None:
         meta_path = Path(self.base_storage_dir) / kb_id / "metadata.json"
         meta_path.parent.mkdir(parents=True, exist_ok=True)
-        meta_path.write_text(meta.model_dump_json(indent=2))
+        # 原子写入：先写临时文件再 rename
+        tmp_path = meta_path.with_suffix(".tmp")
+        tmp_path.write_text(meta.model_dump_json(indent=2))
+        tmp_path.rename(meta_path)
 
     async def remove_instance(self, kb_id: str) -> None:
+        _validate_kb_id(kb_id)
         if kb_id in self._instances:
             del self._instances[kb_id]
         self._metadata_cache.pop(kb_id, None)
