@@ -344,6 +344,17 @@ class GraphragConfig(Base):
     resolution: Annotated[bool, Field(default=False)]
 
 
+class MultimodalEnhanceConfig(Base):
+    """多模态增强配置（与 graphrag、raptor 同级）"""
+    use_multimodal: Annotated[bool, Field(default=False)]
+    parser: Annotated[str, Field(default="mineru")]
+    enable_image: Annotated[bool, Field(default=True)]
+    enable_table: Annotated[bool, Field(default=True)]
+    enable_equation: Annotated[bool, Field(default=True)]
+    context_window: Annotated[int, Field(default=1, ge=0, le=5)]
+    retrieval_weight: Annotated[float, Field(default=0.4, ge=0.0, le=1.0)]
+
+
 class ParserConfig(Base):
     auto_keywords: Annotated[int, Field(default=0, ge=0, le=32)]
     auto_questions: Annotated[int, Field(default=0, ge=0, le=10)]
@@ -358,6 +369,7 @@ class ParserConfig(Base):
     filename_embd_weight: Annotated[float | None, Field(default=0.1, ge=0.0, le=1.0)]
     task_page_size: Annotated[int | None, Field(default=None, ge=1)]
     pages: Annotated[list[list[int]] | None, Field(default=None)]
+    multimodal_enhance: Annotated[MultimodalEnhanceConfig, Field(default_factory=lambda: MultimodalEnhanceConfig(use_multimodal=False))]
 
 
 class CreateDatasetReq(Base):
